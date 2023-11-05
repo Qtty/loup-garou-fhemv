@@ -1,9 +1,9 @@
 # Hardhat Template [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Hardhat][hardhat-badge]][hardhat] [![License: MIT][license-badge]][license]
 
-[gitpod]: https://gitpod.io/#https://github.com/fhenixprotocol/hardhat-template
+[gitpod]: https://gitpod.io/#https://github.com/zama-ai/fhevm-hardhat-template
 [gitpod-badge]: https://img.shields.io/badge/Gitpod-Open%20in%20Gitpod-FFB45B?logo=gitpod
-[gha]: https://github.com/fhenixprotocol/hardhat-template/actions
-[gha-badge]: https://github.com/fhenixprotocol/hardhat-template/actions/workflows/ci.yml/badge.svg
+[gha]: https://github.com/zama-ai/fhevm-hardhat-template/actions
+[gha-badge]: https://github.com/zama-ai/fhevm-hardhat-template/actions/workflows/ci.yml/badge.svg
 [hardhat]: https://hardhat.org/
 [hardhat-badge]: https://img.shields.io/badge/Built%20with-Hardhat-FFDB1C.svg
 [license]: https://opensource.org/licenses/MIT
@@ -20,7 +20,7 @@ A Hardhat-based template for developing Solidity smart contracts, with sensible 
 
 ## Getting Started
 
-Click the [`Use this template`](https://github.com/fhenixprotocol/hardhat-template/generate) button at the top of the
+Click the [`Use this template`](https://github.com/zama-ai/fhevm-hardhat-template/generate) button at the top of the
 page to create a new repository with this repo as the initial state.
 
 ## Features
@@ -66,6 +66,10 @@ You can edit the CI script in [.github/workflows/ci.yml](./.github/workflows/ci.
 
 ### Pre Requisites
 
+Install [docker](https://docs.docker.com/engine/install/)
+
+Install [pnpm](https://pnpm.io/installation)
+
 Before being able to run any command, you need to create a `.env` file and set a BIP-39 compatible mnemonic as an
 environment variable. You can follow the example in `.env.example`. If you don't already have a mnemonic, you can use
 this [website](https://iancoleman.io/bip39/) to generate one.
@@ -73,7 +77,23 @@ this [website](https://iancoleman.io/bip39/) to generate one.
 Then, proceed with installing dependencies:
 
 ```sh
-$ pnpm install
+pnpm install
+```
+
+### Start fhevm
+
+Start a local fhevm docker container that inlcudes everything needed to deploy FHE encrypted smart contracts
+
+```sh
+# In one terminal, keep it opened
+# The node logs are printed
+pnpm fhevm:start
+```
+
+To stop:
+
+```sh
+pnpm fhevm:stop
 ```
 
 ### Compile
@@ -81,7 +101,7 @@ $ pnpm install
 Compile the smart contracts with Hardhat:
 
 ```sh
-$ pnpm compile
+pnpm compile
 ```
 
 ### TypeChain
@@ -89,7 +109,73 @@ $ pnpm compile
 Compile the smart contracts and generate TypeChain bindings:
 
 ```sh
-$ pnpm typechain
+pnpm typechain
+```
+
+### List accounts
+
+From the mnemonic in .env file, list all the derived Ethereum adresses:
+
+```sh
+pnpm task:accounts
+```
+
+### Get some native coins
+
+In order to interact with the blockchain, one need some coins. This command will give coins to the first address derived
+from the mnemonic in .env file.
+
+```sh
+pnpm fhevm:faucet
+```
+
+<br />
+<details>
+  <summary>To get the first derived address from mnemonic</summary>
+<br />
+
+```sh
+pnpm task:getEthereumAddress
+```
+
+</details>
+<br />
+
+### Deploy
+
+Deploy the ERC20 to local network:
+
+```sh
+pnpm deploy:contracts
+```
+
+Notes: <br />
+
+<details>
+<summary>Error: cannot get the transaction for EncryptedERC20's previous deployment</summary>
+
+One can delete the local folder in deployments:
+
+```bash
+rm -r deployments/local/
+```
+
+</details>
+
+<details>
+<summary>Info: by default, the local network is used</summary>
+
+One can change the network, check [hardhat config file](./hardhat.config.ts).
+
+</details>
+<br />
+
+#### Mint
+
+Run the `mint` task on the local network:
+
+```sh
+pnpm task:mint --network local --mint 1000 --account alice
 ```
 
 ### Test
@@ -97,7 +183,7 @@ $ pnpm typechain
 Run the tests with Hardhat:
 
 ```sh
-$ pnpm test
+pnpm test
 ```
 
 ### Lint Solidity
@@ -105,7 +191,7 @@ $ pnpm test
 Lint the Solidity code:
 
 ```sh
-$ pnpm lint:sol
+pnpm lint:sol
 ```
 
 ### Lint TypeScript
@@ -113,7 +199,7 @@ $ pnpm lint:sol
 Lint the TypeScript code:
 
 ```sh
-$ pnpm lint:ts
+pnpm lint:ts
 ```
 
 ### Coverage
@@ -121,7 +207,7 @@ $ pnpm lint:ts
 Generate the code coverage report:
 
 ```sh
-$ pnpm coverage
+pnpm coverage
 ```
 
 ### Report Gas
@@ -129,7 +215,7 @@ $ pnpm coverage
 See the gas usage per unit test and average gas per method call:
 
 ```sh
-$ REPORT_GAS=true pnpm test
+REPORT_GAS=true pnpm test
 ```
 
 ### Clean
@@ -137,33 +223,17 @@ $ REPORT_GAS=true pnpm test
 Delete the smart contract artifacts, the coverage reports and the Hardhat cache:
 
 ```sh
-$ pnpm clean
-```
-
-### Deploy
-
-Deploy the contracts to Hardhat Network:
-
-```sh
-$ pnpm deploy:contracts"
+pnpm clean
 ```
 
 ### Tasks
 
-#### Deploy Counter
+#### Deploy EncryptedERC20
 
-Deploy a new instance of the Counter contract via a task:
-
-```sh
-$ pnpm task:deployCounter --network localfhenix
-```
-
-#### Add count
-
-Run the `addCount` task on the LocalFhenix network:
+Deploy a new instance of the EncryptedERC20 contract via a task:
 
 ```sh
-$ pnpm task:addCount --network localfhenix --amount 12 --account 3
+pnpm task:deployERC20
 ```
 
 ## Tips
@@ -180,24 +250,9 @@ If you use VSCode, you can get Solidity syntax highlighting with the
 To view the coverage report generated by `pnpm coverage`, just click `Go Live` from the status bar to turn the server
 on/off.
 
-## Local development with Ganache
+## Local development with Docker
 
-### Install LocalFhenix
-
-LocalFhenix is available through a docker image. To pull it, run:
-
-```sh
-$ docker pull ghcr.io/fhenixprotocol/fhenix-devnet:0.1.5
-```
-
-### Run a Development Blockchain
-
-```sh
-$ docker run -it -p 8545:8545 -p 6000:6000 \
-  --name localfhenix ghcr.io/fhenixprotocol/fhenix-devnet:0.1.5
-```
-
-Make sure to set the mnemonic in your `.env` file to that of the instance running with LocalFhenix.
+Please check Evmos repository to be able to build FhEVM from sources.
 
 ## License
 

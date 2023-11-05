@@ -6,8 +6,9 @@ import type { NetworkUserConfig } from "hardhat/types";
 import { resolve } from "path";
 
 import "./tasks/accounts";
-import "./tasks/add";
-import "./tasks/getCount";
+import "./tasks/deployERC20";
+import "./tasks/getEthereumAddress";
+import "./tasks/mint";
 
 const dotenvConfigPath: string = process.env.DOTENV_CONFIG_PATH || "./.env";
 dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
@@ -24,6 +25,8 @@ if (!infuraApiKey) {
 }
 
 const chainIds = {
+  local: 9000,
+  zama: 8009,
   "arbitrum-mainnet": 42161,
   avalanche: 43114,
   bsc: 56,
@@ -39,6 +42,12 @@ const chainIds = {
 function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
   let jsonRpcUrl: string;
   switch (chain) {
+    case "local":
+      jsonRpcUrl = "http://localhost:8545/";
+      break;
+    case "zama":
+      jsonRpcUrl = "https://devnet.zama.ai/";
+      break;
     case "avalanche":
       jsonRpcUrl = "https://api.avax.network/ext/bc/C/rpc";
       break;
@@ -60,7 +69,7 @@ function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
 }
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "localfhenix",
+  defaultNetwork: "local",
   namedAccounts: {
     deployer: 0,
   },
@@ -83,21 +92,6 @@ const config: HardhatUserConfig = {
     src: "./contracts",
   },
   networks: {
-    devnet: {
-      accounts: { mnemonic },
-      chainId: 5432,
-      url: "https://devnet.fhenix.io",
-    },
-    ci_localfhenix: {
-      accounts: { mnemonic },
-      chainId: 5432,
-      url: "https://localfhenix:8545",
-    },
-    localfhenix: {
-      accounts: { mnemonic, path: "m/44'/60'/0'/0" },
-      chainId: 5432,
-      url: "http://localhost:8545",
-    },
     hardhat: {
       accounts: {
         mnemonic,
@@ -119,6 +113,8 @@ const config: HardhatUserConfig = {
     "polygon-mainnet": getChainConfig("polygon-mainnet"),
     "polygon-mumbai": getChainConfig("polygon-mumbai"),
     sepolia: getChainConfig("sepolia"),
+    zama: getChainConfig("zama"),
+    local: getChainConfig("local"),
   },
   paths: {
     artifacts: "./artifacts",
@@ -137,7 +133,7 @@ const config: HardhatUserConfig = {
       // Disable the optimizer when debugging
       // https://hardhat.org/hardhat-network/#solidity-optimizer-support
       optimizer: {
-        enabled: false,
+        enabled: true,
         runs: 800,
       },
     },
@@ -145,6 +141,9 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: "types",
     target: "ethers-v6",
+  },
+  mocha: {
+    timeout: 100000000,
   },
 };
 
