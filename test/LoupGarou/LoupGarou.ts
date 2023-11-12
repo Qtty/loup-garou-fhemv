@@ -68,15 +68,43 @@ describe("Loup Garou", function () {
   it("the wolves should vote against a person and he dies", async function () {
     var tmpContract;
     var tx;
-    const playersIds = [0, 1, 2, 3];
+    this.playersIds = new Map<string, number>();
+    this.playersIds.set(this.signers.alice.address, 0);
+    this.playersIds.set(this.signers.bob.address, 1);
+    this.playersIds.set(this.signers.dave.address, 2);
+    this.playersIds.set(this.signers.carol.address, 3);
 
     console.log("Voting a person out");
     for (let i = 0; i < 4; i++) {
       tmpContract = this.loupGarou.connect(this.playersSigners[i]);
-      var chosenVictim = 3 - i; // Math.floor(Math.random() * playersIds.length);
+      var chosenVictim = this.playersIds.get(this.playersSigners[3 - i].address);
       tx = await createTransaction(tmpContract.wolvesNight, this.players[i].encrypt8(chosenVictim));
       await tx.wait();
       console.log("player %s voted for %d", this.playersSigners[i].address, chosenVictim);
+    }
+
+    var killedPerson = await this.loupGarou.gotKilled();
+    console.log("voted out person is %s with id %d", killedPerson, this.playersIds.get(killedPerson));
+
+    this.playersIds.delete(killedPerson);
+
+    var registeredPlayers = await this.loupGarou.getRegisteredPlayers();
+    expect(registeredPlayers).to.not.include(killedPerson);
+  });
+
+  it("village members should vote a person and he dies", async function () {
+    var tmpContract;
+    var tx;
+
+    console.log("Voting a person out");
+    for (let i = 0; i < 4; i++) {
+      if ([...this.playersIds.keys()].includes(this.playersSigners[i].address)) {
+        tmpContract = this.loupGarou.connect(this.playersSigners[i]);
+        var chosenVictim = [...this.playersIds.values()][Math.floor(Math.random() * this.playersIds.size)];
+        tx = await createTransaction(tmpContract.dailyDebate, chosenVictim);
+        await tx.wait();
+        console.log("player %s voted for %d", this.playersSigners[i].address, chosenVictim);
+      }
     }
 
     var killedPerson = await this.loupGarou.gotKilled();

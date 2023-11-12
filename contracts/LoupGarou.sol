@@ -20,11 +20,13 @@ contract LoupGarou {
 
     mapping(address => uint8) public playersIds;
     mapping(uint8 => address) public playerAddresses;
-    mapping(uint8 => euint8) private count;
+    mapping(uint8 => euint8) private wolvesVoteCount;
+    mapping(uint8 => uint8) private dailyVoteCount;
     address[] public registeredPlayers;
     euint8[] private roles;
-    uint256 public registered_count = 0;
-    uint8 private wolvesVoteCount = 0;
+    uint256 public registeredCount = 0;
+    uint8 private wolvesVoteCounter = 0;
+    uint8 private dailyVoteCounter = 0;
     uint8 public killedPerson;
 
     // Note: The IPFS link for villagers chat is just a placeholder in this example
@@ -51,16 +53,16 @@ contract LoupGarou {
     }
 
     function registerForGame() public {
-        require(registered_count < total_players, "Game is full");
+        require(registeredCount < total_players, "Game is full");
 
         registeredPlayers.push(msg.sender);
-        registered_count++;
-        console.log("player %s registered, count is %d", msg.sender, registered_count);
+        registeredCount++;
+        console.log("player %s registered, count is %d", msg.sender, registeredCount);
 
         //shuffle
         _shuffleRoles();
 
-        if (registered_count == total_players) {
+        if (registeredCount == total_players) {
             console.log("assigning roles");
             for (uint8 i = 0; i < total_players; i++) {
                 playersIds[registeredPlayers[i]] = i;
@@ -118,18 +120,21 @@ contract LoupGarou {
         euint8 tmpKilled;
         uint8 id;
 
-        wolvesVoteCount += 1;
+        wolvesVoteCounter += 1;
 
         for (uint8 i = 0; i < registeredPlayers.length; i++) {
             id = playersIds[registeredPlayers[i]];
-            count[id] = TFHE.add(count[id], TFHE.cmux(TFHE.eq(vote, id), TFHE.asEuint8(1), TFHE.asEuint8(0)));
+            wolvesVoteCount[id] = TFHE.add(
+                wolvesVoteCount[id],
+                TFHE.cmux(TFHE.eq(vote, id), TFHE.asEuint8(1), TFHE.asEuint8(0))
+            );
         }
 
-        if (wolvesVoteCount == registeredPlayers.length) {
+        if (wolvesVoteCounter == registeredPlayers.length) {
             id = get_max();
             killedPerson = id;
             pop_dead_person(killedPerson);
-            wolvesVoteCount = 0;
+            wolvesVoteCounter = 0;
         }
     }
 
@@ -149,7 +154,7 @@ contract LoupGarou {
     }
 
     function get_max() internal returns (uint8) {
-        euint8 max = count[playersIds[registeredPlayers[0]]];
+        euint8 max = wolvesVoteCount[playersIds[registeredPlayers[0]]];
         euint8 max_id = TFHE.asEuint8(playersIds[registeredPlayers[0]]);
         uint8 id;
 
@@ -157,15 +162,15 @@ contract LoupGarou {
         for (uint i = 1; i < registeredPlayers.length; i++) {
             id = playersIds[registeredPlayers[i]];
             // Update max if the current element is greater
-            max = TFHE.max(max, count[id]);
-            max_id = TFHE.cmux(TFHE.eq(max, count[id]), TFHE.asEuint8(id), max_id);
+            max = TFHE.max(max, wolvesVoteCount[id]);
+            max_id = TFHE.cmux(TFHE.eq(max, wolvesVoteCount[id]), TFHE.asEuint8(id), max_id);
         }
 
         // reset the count mapping for the next round
         for (uint i = 0; i < registeredPlayers.length; i++) {
             id = playersIds[registeredPlayers[i]];
 
-            count[id] = TFHE.asEuint8(0);
+            wolvesVoteCount[id] = TFHE.asEuint8(0);
         }
 
         // Return the maximum value
@@ -198,10 +203,36 @@ contract LoupGarou {
         return (hasKillPotion, hasSavePotion);
     }
 
-    function daily_debate(address vote) public returns (address) {
-        require(TFHE.decrypt(TFHE.eq(playersIds[msg.sender], ROLE_NONE)), "Only registered players can vote");
+    // TODO: the voter also sends an auto text when he votes from the UI, that way everyone knows the votes
+    function dailyDebate(uint8 _vote) public {
+        dailyVoteCount[_vote] += 1;
+        dailyVoteCounter += 1;
 
-        // TODO: Implement voting logic
-        return vote; // Placeholder
+        if (dailyVoteCounter == registeredPlayers.length) {
+            killedPerson = indexOfMaxValue();
+            pop_dead_person(killedPerson);
+            dailyVoteCounter = 0;
+        }
+    }
+
+    function indexOfMaxValue() public returns (uint8) {
+        uint8 maxIndex = playersIds[registeredPlayers[0]];
+        uint8 maxValue = dailyVoteCount[playersIds[registeredPlayers[0]]];
+        uint8 id;
+
+        for (uint8 i = 1; i < registeredPlayers.length; i++) {
+            id = playersIds[registeredPlayers[i]];
+            if (dailyVoteCount[id] > maxValue) {
+                maxValue = dailyVoteCount[id];
+                maxIndex = id;
+            }
+        }
+
+        for (uint8 i = 1; i < registeredPlayers.length; i++) {
+            id = playersIds[registeredPlayers[i]];
+            dailyVoteCount[id] = 0;
+        }
+
+        return maxIndex;
     }
 }
