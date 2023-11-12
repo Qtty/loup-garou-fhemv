@@ -18,10 +18,14 @@ contract LoupGarou {
     // shuffled roles
     euint8[total_players] shuffled_roles;
 
-    mapping(address => euint8) public registered_players;
-    address[] public registeredPlayersAddresses;
-    euint8[] public roles;
+    mapping(address => uint8) public playersIds;
+    mapping(uint8 => address) public playerAddresses;
+    mapping(uint8 => euint8) private count;
+    address[] public registeredPlayers;
+    euint8[] private roles;
     uint256 public registered_count = 0;
+    uint8 private wolvesVoteCount = 0;
+    uint8 public killedPerson;
 
     // Note: The IPFS link for villagers chat is just a placeholder in this example
     string public villagers_chat = "ipfs://sample_link_here";
@@ -49,7 +53,7 @@ contract LoupGarou {
     function registerForGame() public {
         require(registered_count < total_players, "Game is full");
 
-        registeredPlayersAddresses.push(msg.sender);
+        registeredPlayers.push(msg.sender);
         registered_count++;
         console.log("player %s registered, count is %d", msg.sender, registered_count);
 
@@ -59,7 +63,8 @@ contract LoupGarou {
         if (registered_count == total_players) {
             console.log("assigning roles");
             for (uint8 i = 0; i < total_players; i++) {
-                registered_players[registeredPlayersAddresses[i]] = shuffled_roles[i];
+                playersIds[registeredPlayers[i]] = i;
+                playerAddresses[i] = registeredPlayers[i];
             }
         }
     }
@@ -97,12 +102,78 @@ contract LoupGarou {
     }
 
     function getRole(bytes32 publicKey, bytes calldata signature) public view returns (bytes memory) {
-        return TFHE.reencrypt(registered_players[msg.sender], publicKey, 10);
+        return TFHE.reencrypt(shuffled_roles[playersIds[msg.sender]], publicKey, 0);
     }
 
-    function wolves_night(address vote) public returns (address) {
-        kill[vote] = TFHE.add(kill[vote], TFHE.cmux(TFHE.eq(registered_players[msg.sender], ROLE_WOLF), TFHE.asEuint(1), TFHE.asEuint(0)))
-        return vote; // Placeholder
+    function gotKilled() public view returns (address) {
+        return playerAddresses[killedPerson];
+    }
+
+    // TODO: check for the case of two persons having same number of votes
+    function wolvesNight(bytes calldata _vote) public {
+        euint8 tmpVote = TFHE.asEuint8(_vote);
+        ebool isWolf = TFHE.eq(shuffled_roles[playersIds[msg.sender]], ROLE_WOLF);
+        ebool notSuicide = TFHE.ne(tmpVote, playersIds[msg.sender]);
+        euint8 vote = TFHE.cmux(isWolf, tmpVote, TFHE.asEuint8(total_players));
+        euint8 tmpKilled;
+        uint8 id;
+
+        wolvesVoteCount += 1;
+
+        for (uint8 i = 0; i < registeredPlayers.length; i++) {
+            id = playersIds[registeredPlayers[i]];
+            count[id] = TFHE.add(count[id], TFHE.cmux(TFHE.eq(vote, id), TFHE.asEuint8(1), TFHE.asEuint8(0)));
+        }
+
+        if (wolvesVoteCount == registeredPlayers.length) {
+            id = get_max();
+            killedPerson = id;
+            pop_dead_person(killedPerson);
+            wolvesVoteCount = 0;
+        }
+    }
+
+    function pop_dead_person(uint8 _killedPerson) internal {
+        address tmpAddress;
+        // remove dead person from players
+        for (uint8 i = 0; i < registeredPlayers.length; i++) {
+            if (playersIds[registeredPlayers[i]] == _killedPerson) {
+                tmpAddress = registeredPlayers[registeredPlayers.length - 1];
+                registeredPlayers[registeredPlayers.length - 1] = registeredPlayers[i];
+                registeredPlayers[i] = tmpAddress;
+                break;
+            }
+        }
+
+        registeredPlayers.pop();
+    }
+
+    function get_max() internal returns (uint8) {
+        euint8 max = count[playersIds[registeredPlayers[0]]];
+        euint8 max_id = TFHE.asEuint8(playersIds[registeredPlayers[0]]);
+        uint8 id;
+
+        // Iterate over the array, starting from the second element
+        for (uint i = 1; i < registeredPlayers.length; i++) {
+            id = playersIds[registeredPlayers[i]];
+            // Update max if the current element is greater
+            max = TFHE.max(max, count[id]);
+            max_id = TFHE.cmux(TFHE.eq(max, count[id]), TFHE.asEuint8(id), max_id);
+        }
+
+        // reset the count mapping for the next round
+        for (uint i = 0; i < registeredPlayers.length; i++) {
+            id = playersIds[registeredPlayers[i]];
+
+            count[id] = TFHE.asEuint8(0);
+        }
+
+        // Return the maximum value
+        return TFHE.decrypt(max_id);
+    }
+
+    function getRegisteredPlayers() public view returns (address[] memory) {
+        return registeredPlayers;
     }
 
     struct SorcererAction {
@@ -111,14 +182,14 @@ contract LoupGarou {
     }
 
     function sorcerer_night(SorcererAction memory actions) public returns (address, address) {
-        TFHE.optReq(TFHE.eq(registered_players[msg.sender], ROLE_SORCERER));
+        TFHE.optReq(TFHE.eq(playersIds[msg.sender], ROLE_SORCERER));
 
         // TODO: Implement logic to handle the sorcerer's actions
         return (actions.kill, actions.save ? actions.kill : address(0)); // Placeholder
     }
 
     function get_sorcerer_potions() public view returns (bool, bool) {
-        TFHE.optReq(TFHE.eq(registered_players[msg.sender], ROLE_SORCERER));
+        TFHE.optReq(TFHE.eq(playersIds[msg.sender], ROLE_SORCERER));
 
         // Placeholder values; in a real contract, you'd track the actual potion counts
         bool hasKillPotion = true;
@@ -128,7 +199,7 @@ contract LoupGarou {
     }
 
     function daily_debate(address vote) public returns (address) {
-        require(TFHE.decrypt(TFHE.eq(registered_players[msg.sender], ROLE_NONE)), "Only registered players can vote");
+        require(TFHE.decrypt(TFHE.eq(playersIds[msg.sender], ROLE_NONE)), "Only registered players can vote");
 
         // TODO: Implement voting logic
         return vote; // Placeholder

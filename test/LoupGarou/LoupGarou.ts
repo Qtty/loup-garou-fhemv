@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { kill } from "process";
 
 import { LoupGarou } from "../../types";
 import { createInstances } from "../instance";
@@ -10,17 +11,28 @@ import { deployLoupGarouFixture } from "./LoupGarou.fixture";
 describe("Loup Garou", function () {
   before(async function () {
     this.signers = await getSigners(ethers);
-  });
 
-  this.beforeEach(async function () {
-    // deploy test contract
     const contract = await deployLoupGarouFixture();
     this.contractAddress = await contract.getAddress();
     this.loupGarou = contract;
 
     // initiate fhevmjs
     this.instances = await createInstances(this.contractAddress, ethers, this.signers);
+
+    const alice = this.instances.alice;
+    const bob = this.instances.bob;
+    const dave = this.instances.dave;
+    const carol = this.instances.carol;
+    this.players = [alice, bob, dave, carol];
+
+    const aliceSigner = this.signers.alice;
+    const bobSigner = this.signers.bob;
+    const daveSigner = this.signers.dave;
+    const carolSigner = this.signers.carol;
+    this.playersSigners = [aliceSigner, bobSigner, daveSigner, carolSigner];
   });
+
+  this.beforeEach(async function () {});
 
   it("should yield random roles", async function () {
     const roleWolf = this.instances.owner.encrypt8(1);
@@ -30,33 +42,47 @@ describe("Loup Garou", function () {
     var tx = await createTransaction(this.loupGarou.setGameEnv, roleWolf, roleHuman, roleSorcerer);
     await tx.wait();
 
-    const alice = this.instances.alice;
-    const bob = this.instances.bob;
-    const dave = this.instances.dave;
-    const carol = this.instances.carol;
-    const players = [alice, bob, dave, carol];
-
-    const aliceSigner = this.signers.alice;
-    const bobSigner = this.signers.bob;
-    const daveSigner = this.signers.dave;
-    const carolSigner = this.signers.carol;
-    const playersSigners = [aliceSigner, bobSigner, daveSigner, carolSigner];
     var tmpContract;
 
     console.log("game env set");
-    for (const player of playersSigners) {
+    for (const player of this.playersSigners) {
       tmpContract = this.loupGarou.connect(player);
       tx = await createTransaction(tmpContract.registerForGame);
       await tx.wait();
       console.log("player: %s registered", player.address);
     }
 
+    let shuffled_roles = [];
     for (let i = 0; i < 4; i++) {
-      tmpContract = this.loupGarou.connect(playersSigners[i]);
-      var tmpToken = players[i].getTokenSignature(this.contractAddress);
+      tmpContract = this.loupGarou.connect(this.playersSigners[i]);
+      var tmpToken = this.players[i].getTokenSignature(this.contractAddress);
       var encryptedRole = await tmpContract.getRole(tmpToken?.publicKey, tmpToken?.signature);
-      var role = players[i].decrypt(this.contractAddress, encryptedRole);
+      var role = this.players[i].decrypt(this.contractAddress, encryptedRole);
+      shuffled_roles.push(role);
       console.log("---- role %d: %d", i, role);
     }
+
+    expect(shuffled_roles).to.not.equal([1, 2, 2, 3]);
+  });
+
+  it("the wolves should vote against a person and he dies", async function () {
+    var tmpContract;
+    var tx;
+    const playersIds = [0, 1, 2, 3];
+
+    console.log("Voting a person out");
+    for (let i = 0; i < 4; i++) {
+      tmpContract = this.loupGarou.connect(this.playersSigners[i]);
+      var chosenVictim = 3 - i; // Math.floor(Math.random() * playersIds.length);
+      tx = await createTransaction(tmpContract.wolvesNight, this.players[i].encrypt8(chosenVictim));
+      await tx.wait();
+      console.log("player %s voted for %d", this.playersSigners[i].address, chosenVictim);
+    }
+
+    var killedPerson = await this.loupGarou.gotKilled();
+    console.log("voted out person is %s", killedPerson);
+
+    var registeredPlayers = await this.loupGarou.getRegisteredPlayers();
+    expect(registeredPlayers).to.not.include(killedPerson);
   });
 });
