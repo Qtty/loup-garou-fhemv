@@ -7,7 +7,7 @@ import "fhevm/lib/TFHE.sol";
 import "hardhat/console.sol";
 
 contract LoupGarou {
-    uint8 public constant total_players = 4;
+    uint8 public constant total_players = 8;
 
     // Using integers instead of enum for roles
     euint8 ROLE_NONE;
@@ -18,12 +18,14 @@ contract LoupGarou {
     // shuffled roles
     euint8[total_players] shuffled_roles;
 
+    mapping(uint8 => euint8) private wolvesVoteCount;
+    euint8[] private roles;
     mapping(address => uint8) public playersIds;
     mapping(uint8 => address) public playerAddresses;
-    mapping(uint8 => euint8) private wolvesVoteCount;
     mapping(uint8 => uint8) private dailyVoteCount;
     address[] public registeredPlayers;
-    euint8[] private roles;
+    bool public wolves_win = false;
+    bool public villagers_win = false;
     uint256 public registeredCount = 0;
     uint8 private wolvesVoteCounter = 0;
     uint8 private dailyVoteCounter = 0;
@@ -43,8 +45,8 @@ contract LoupGarou {
         roles.push(ROLE_VILLAGER);
         roles.push(ROLE_SORCERER);
 
-        roles_ratio[ROLE_WOLF] = 1;
-        roles_ratio[ROLE_VILLAGER] = 2;
+        roles_ratio[ROLE_WOLF] = 2;
+        roles_ratio[ROLE_VILLAGER] = 5;
         roles_ratio[ROLE_SORCERER] = 1;
 
         prepareRolesAssignment();
@@ -212,6 +214,21 @@ contract LoupGarou {
             killedPerson = indexOfMaxValue();
             pop_dead_person(killedPerson);
             dailyVoteCounter = 0;
+
+            euint8 wolves_count = TFHE.asEuint8(0);
+            ebool isWolf;
+            for (uint8 i = 0; i < registeredPlayers.length; i++) {
+                isWolf = TFHE.eq(shuffled_roles[playersIds[registeredPlayers[i]]], ROLE_WOLF);
+                wolves_count = TFHE.add(TFHE.cmux(isWolf, TFHE.asEuint8(1), TFHE.asEuint8(0)), wolves_count);
+            }
+
+            if (TFHE.decrypt(TFHE.ge(wolves_count, TFHE.asEuint8(registeredPlayers.length / 2)))) {
+                wolves_win = true;
+            }
+
+            if (TFHE.decrypt(TFHE.eq(wolves_count, TFHE.asEuint8(0)))) {
+                villagers_win = true;
+            }
         }
     }
 

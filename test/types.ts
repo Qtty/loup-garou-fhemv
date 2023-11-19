@@ -1,6 +1,7 @@
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/dist/src/signer-with-address";
 import type { FhevmInstance } from "fhevmjs";
 
-import { EncryptedERC20 } from "../types";
+import { LoupGarou } from "../types";
 import type { Signers } from "./signers";
 
 declare module "mocha" {
@@ -8,7 +9,8 @@ declare module "mocha" {
     signers: Signers;
     contractAddress: string;
     instances: FhevmInstances;
-    erc20: EncryptedERC20;
+    loupGarou: LoupGarou;
+    players: Array<Player>;
   }
 }
 
@@ -18,4 +20,16 @@ export interface FhevmInstances {
   bob: FhevmInstance;
   carol: FhevmInstance;
   dave: FhevmInstance;
+  player5: FhevmInstance;
+  player6: FhevmInstance;
+  player7: FhevmInstance;
+  player8: FhevmInstance;
+}
+
+export interface Player {
+  name: String;
+  instance: FhevmInstance;
+  signer: SignerWithAddress;
+  id: number;
+  role: number;
 }
