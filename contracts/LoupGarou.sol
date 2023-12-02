@@ -7,7 +7,7 @@ import "fhevm/lib/TFHE.sol";
 import "hardhat/console.sol";
 
 contract LoupGarou {
-    uint8 public constant total_players = 8;
+    uint8 public constant total_players = 4;
 
     // Using integers instead of enum for roles
     euint8 ROLE_NONE;
@@ -26,7 +26,7 @@ contract LoupGarou {
     address[] public registeredPlayers;
     bool public wolves_win = false;
     bool public villagers_win = false;
-    uint256 public registeredCount = 0;
+    uint8 public registeredCount = 0;
     uint8 private wolvesVoteCounter = 0;
     uint8 private dailyVoteCounter = 0;
     uint8 public killedPerson;
@@ -45,8 +45,8 @@ contract LoupGarou {
         roles.push(ROLE_VILLAGER);
         roles.push(ROLE_SORCERER);
 
-        roles_ratio[ROLE_WOLF] = 2;
-        roles_ratio[ROLE_VILLAGER] = 5;
+        roles_ratio[ROLE_WOLF] = 1;
+        roles_ratio[ROLE_VILLAGER] = 2;
         roles_ratio[ROLE_SORCERER] = 1;
 
         prepareRolesAssignment();
@@ -71,6 +71,10 @@ contract LoupGarou {
                 playerAddresses[i] = registeredPlayers[i];
             }
         }
+    }
+
+    function getPlayersLeftToRegister() public view returns (uint8) {
+        return total_players - registeredCount;
     }
 
     function prepareRolesAssignment() private {

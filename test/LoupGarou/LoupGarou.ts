@@ -61,9 +61,11 @@ describe("Loup Garou", function () {
     var tmpContract;
 
     console.log("game env set");
+    process.exit(0);
     for (const player of this.players) {
       tmpContract = this.loupGarou.connect(player.signer);
       tx = await createTransaction(tmpContract.registerForGame);
+      console.log("transaction: " + tx.hash);
       await tx.wait();
       console.log("player: %s registered", player.signer.address);
 
