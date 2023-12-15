@@ -117,7 +117,6 @@ contract LoupGarou {
         return playerAddresses[killedPerson];
     }
 
-    // TODO: check for the case of two persons having same number of votes
     function wolvesNight(bytes calldata _vote) public {
         euint8 tmpVote = TFHE.asEuint8(_vote);
         ebool isWolf = TFHE.eq(shuffled_roles[playersIds[msg.sender]], ROLE_WOLF);
