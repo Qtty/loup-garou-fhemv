@@ -7,7 +7,7 @@ import "fhevm/lib/TFHE.sol";
 import "hardhat/console.sol";
 
 contract LoupGarou {
-    uint8 public constant total_players = 4;
+    uint8 public constant total_players = 3;
 
     // Using integers instead of enum for roles
     euint8 ROLE_NONE;
@@ -30,9 +30,7 @@ contract LoupGarou {
     uint8 private wolvesVoteCounter = 0;
     uint8 private dailyVoteCounter = 0;
     uint8 public killedPerson;
-
-    // Note: The IPFS link for villagers chat is just a placeholder in this example
-    string public villagers_chat = "ipfs://sample_link_here";
+    uint8 public constant invalidId = 99;
 
     mapping(euint8 => uint256) public roles_ratio;
 
@@ -46,7 +44,7 @@ contract LoupGarou {
         roles.push(ROLE_SORCERER);
 
         roles_ratio[ROLE_WOLF] = 1;
-        roles_ratio[ROLE_VILLAGER] = 2;
+        roles_ratio[ROLE_VILLAGER] = 1;
         roles_ratio[ROLE_SORCERER] = 1;
 
         prepareRolesAssignment();
@@ -58,13 +56,12 @@ contract LoupGarou {
         require(registeredCount < total_players, "Game is full");
 
         registeredPlayers.push(msg.sender);
-        registeredCount++;
-        console.log("player %s registered, count is %d", msg.sender, registeredCount);
+        console.log("player %s registered, count is %d", msg.sender, registeredPlayers.length);
 
         //shuffle
         _shuffleRoles();
 
-        if (registeredCount == total_players) {
+        if (registeredPlayers.length == total_players) {
             console.log("assigning roles");
             for (uint8 i = 0; i < total_players; i++) {
                 playersIds[registeredPlayers[i]] = i;
@@ -73,8 +70,8 @@ contract LoupGarou {
         }
     }
 
-    function getPlayersLeftToRegister() public view returns (uint8) {
-        return total_players - registeredCount;
+    function getPlayersLeftToRegister() public view returns (uint256) {
+        return total_players - registeredPlayers.length;
     }
 
     function prepareRolesAssignment() private {
@@ -114,6 +111,9 @@ contract LoupGarou {
     }
 
     function gotKilled() public view returns (address) {
+        if (killedPerson == invalidId) {
+            return address(0x0000000000000000000000000000);
+        }
         return playerAddresses[killedPerson];
     }
 
@@ -121,9 +121,7 @@ contract LoupGarou {
     function wolvesNight(bytes calldata _vote) public {
         euint8 tmpVote = TFHE.asEuint8(_vote);
         ebool isWolf = TFHE.eq(shuffled_roles[playersIds[msg.sender]], ROLE_WOLF);
-        ebool notSuicide = TFHE.ne(tmpVote, playersIds[msg.sender]);
         euint8 vote = TFHE.cmux(isWolf, tmpVote, TFHE.asEuint8(total_players));
-        euint8 tmpKilled;
         uint8 id;
 
         wolvesVoteCounter += 1;
@@ -160,16 +158,16 @@ contract LoupGarou {
     }
 
     function get_max() internal returns (uint8) {
-        euint8 max = wolvesVoteCount[playersIds[registeredPlayers[0]]];
-        euint8 max_id = TFHE.asEuint8(playersIds[registeredPlayers[0]]);
+        uint8 max_id = playersIds[registeredPlayers[0]];
         uint8 id;
 
         // Iterate over the array, starting from the second element
         for (uint i = 1; i < registeredPlayers.length; i++) {
             id = playersIds[registeredPlayers[i]];
             // Update max if the current element is greater
-            max = TFHE.max(max, wolvesVoteCount[id]);
-            max_id = TFHE.cmux(TFHE.eq(max, wolvesVoteCount[id]), TFHE.asEuint8(id), max_id);
+            if (TFHE.decrypt(TFHE.le(wolvesVoteCount[max_id], wolvesVoteCount[id]))) {
+                max_id = id;
+            }
         }
 
         // reset the count mapping for the next round
@@ -180,44 +178,27 @@ contract LoupGarou {
         }
 
         // Return the maximum value
-        return TFHE.decrypt(max_id);
+        return max_id;
     }
 
     function getRegisteredPlayers() public view returns (address[] memory) {
         return registeredPlayers;
     }
 
-    struct SorcererAction {
-        address kill;
-        bool save;
-    }
-
-    function sorcerer_night(SorcererAction memory actions) public returns (address, address) {
-        TFHE.optReq(TFHE.eq(playersIds[msg.sender], ROLE_SORCERER));
-
-        // TODO: Implement logic to handle the sorcerer's actions
-        return (actions.kill, actions.save ? actions.kill : address(0)); // Placeholder
-    }
-
-    function get_sorcerer_potions() public view returns (bool, bool) {
-        TFHE.optReq(TFHE.eq(playersIds[msg.sender], ROLE_SORCERER));
-
-        // Placeholder values; in a real contract, you'd track the actual potion counts
-        bool hasKillPotion = true;
-        bool hasSavePotion = true;
-
-        return (hasKillPotion, hasSavePotion);
-    }
-
-    // TODO: the voter also sends an auto text when he votes from the UI, that way everyone knows the votes
     function dailyDebate(uint8 _vote) public {
         dailyVoteCount[_vote] += 1;
         dailyVoteCounter += 1;
 
         if (dailyVoteCounter == registeredPlayers.length) {
             killedPerson = indexOfMaxValue();
-            pop_dead_person(killedPerson);
+            if (killedPerson != invalidId) {
+                pop_dead_person(killedPerson);
+            }
             dailyVoteCounter = 0;
+            for (uint8 i = 0; i < registeredPlayers.length; i++) {
+                uint8 id = playersIds[registeredPlayers[i]];
+                dailyVoteCount[id] = 0;
+            }
 
             euint8 wolves_count = TFHE.asEuint8(0);
             ebool isWolf;
@@ -236,22 +217,25 @@ contract LoupGarou {
         }
     }
 
-    function indexOfMaxValue() public returns (uint8) {
-        uint8 maxIndex = playersIds[registeredPlayers[0]];
+    function indexOfMaxValue() internal view returns (uint8) {
+        uint8 maxIndex = 0;
         uint8 maxValue = dailyVoteCount[playersIds[registeredPlayers[0]]];
         uint8 id;
+        bool tie = false; // Flag to check if there is a tie
 
         for (uint8 i = 1; i < registeredPlayers.length; i++) {
             id = playersIds[registeredPlayers[i]];
             if (dailyVoteCount[id] > maxValue) {
                 maxValue = dailyVoteCount[id];
                 maxIndex = id;
+                tie = false; // Reset the tie flag if a new max is found
+            } else if (dailyVoteCount[id] == maxValue) {
+                tie = true; // Set the tie flag if there is an equal vote
             }
         }
 
-        for (uint8 i = 1; i < registeredPlayers.length; i++) {
-            id = playersIds[registeredPlayers[i]];
-            dailyVoteCount[id] = 0;
+        if (tie) {
+            return invalidId; // Return an invalid number in case of a tie
         }
 
         return maxIndex;

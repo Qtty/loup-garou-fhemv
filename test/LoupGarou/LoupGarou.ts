@@ -37,7 +37,7 @@ describe("Loup Garou", function () {
     signers.shift();
 
     this.players = [];
-    for (let i = 0; i < instances.length; i++) {
+    for (let i = 0; i < 3; i++) {
       this.players.push({
         name: `player${i + 1}`,
         instance: instances[i],
@@ -61,17 +61,12 @@ describe("Loup Garou", function () {
     var tmpContract;
 
     console.log("game env set");
-    process.exit(0);
     for (const player of this.players) {
       tmpContract = this.loupGarou.connect(player.signer);
       tx = await createTransaction(tmpContract.registerForGame);
       console.log("transaction: " + tx.hash);
       await tx.wait();
       console.log("player: %s registered", player.signer.address);
-
-      setTimeout(() => {
-        console.log("Awake!");
-      }, 5000);
     }
 
     let shuffled_roles = [];
@@ -93,7 +88,7 @@ describe("Loup Garou", function () {
     var tx;
 
     var c = this.players.length - 1;
-    var chosenVictim = this.players[4].id;
+    var chosenVictim = this.players[1].id;
     console.log("Wolves voting a person out");
     for (const player of this.players) {
       tmpContract = this.loupGarou.connect(player.signer);
