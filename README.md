@@ -1,5 +1,7 @@
 # Werewolf Game Backend Documentation
 
+![Werewolf Ethereum Integration](md_wallpaper.png)
+
 ## Introduction
 
 This repository showcases the backend implementation for the Werewolf Game, a project submitted as part of the Zama Bug
@@ -35,6 +37,15 @@ fairness and privacy. This technology enables us to implement a game that was pr
 decentralized environment, opening new horizons for secure and private decentralized applications.
 
 For more insights into how these concepts are practically applied, please see the [Game Logic](#game-logic) section.
+
+### Why Werewolf From All Other Games?
+
+The choice to build the Werewolf game on the Ethereum blockchain using Zama's TFHE (Fully Homomorphic Encryption) was
+driven by a desire to showcase the vast potential of blockchain technology in hosting various types of games, including
+social and society-based games. By leveraging the advanced privacy and confidentiality features of TFHE, this project
+demonstrates how blockchain can bridge the gap with traditional web capabilities, empowering users to bring a wide range
+of applications – even complex, interactive social games – onto the blockchain platform. This endeavor highlights the
+versatility and adaptability of blockchain technology in catering to diverse and engaging user experiences.
 
 ## Key Features
 
