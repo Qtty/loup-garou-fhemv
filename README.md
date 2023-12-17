@@ -160,6 +160,32 @@ process to deploy the contract to both a local test network and the Zama network
 _Following these steps will deploy your smart contract to the desired network, establishing the foundation for the
 game's backend functionalities._
 
+## Configuring Game Settings
+
+### Customizing Player Numbers and Role Ratios
+
+To tailor the Werewolf game to your preferences, you can configure the number of players and the ratio of different
+roles. This customization is done in the `LoupGarou.sol` smart contract.
+
+#### Steps for Configuration:
+
+1. **Adjusting Total Number of Players**:
+
+   - Locate the `LoupGarou.sol` file in your project.
+   - Find the `total_players` attribute.
+   - Modify its value to reflect the desired number of players in the game.
+
+2. **Setting Role Ratios**:
+   - In the `setGameEnv` function within `LoupGarou.sol`, locate the `roles_ratio` mapping.
+   - Adjust the mapping to define how many players should be assigned each role (e.g., Werewolf, Villager, Sorcerer).
+   - The ratios should align with your total number of players and desired game dynamics.
+
+#### Importance of Accurate Configuration:
+
+- It's essential to ensure that the total number of players and the role ratios are correctly set to maintain game
+  balance and functionality.
+- Incorrect configurations may lead to gameplay issues or imbalance in role distribution.
+
 ## Game Logic
 
 ### Overview of the Game
