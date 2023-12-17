@@ -133,6 +133,33 @@ add `REPORT_GAS=true`:
 REPORT_GAS=true pnpm test
 ```
 
+## Deploying the Smart Contract
+
+### Deployment Instructions
+
+Deploying the smart contract is a crucial step in setting up the backend for the Werewolf game. We provide a streamlined
+process to deploy the contract to both a local test network and the Zama network.
+
+#### Local Network Deployment
+
+1. **Deploy to Local Network**:
+   - Use the command `pnpm deploy:contracts` in your terminal.
+   - This will deploy the smart contract to your local Ethereum network, suitable for development and testing purposes.
+
+#### Deployment to Zama Network
+
+1. **Deploy to Zama Network**:
+   - To deploy the smart contract to the Zama network, append `--network zama` to the deployment command.
+   - Run `pnpm deploy:contracts --network zama` in your terminal.
+   - This targets the Zama network for deployment, allowing the smart contract to interact with the Zama environment.
+
+#### Note:
+
+- Ensure you have the necessary configurations and network details set up for deploying to the Zama network.
+
+_Following these steps will deploy your smart contract to the desired network, establishing the foundation for the
+game's backend functionalities._
+
 ## Game Logic
 
 ### Overview of the Game
