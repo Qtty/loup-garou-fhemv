@@ -47,6 +47,28 @@ demonstrates how blockchain can bridge the gap with traditional web capabilities
 of applications – even complex, interactive social games – onto the blockchain platform. This endeavor highlights the
 versatility and adaptability of blockchain technology in catering to diverse and engaging user experiences.
 
+## Important Notice: Using Coinbase Wallet
+
+### Switch to Coinbase Wallet
+
+Due to a recent bug identified with Metamask, as described in
+[this github issue](https://github.com/ethers-io/ethers.js/issues/4513), we recommend using Coinbase Wallet for
+interactions with the blockchain in our Werewolf game.
+
+#### Why Coinbase Wallet?
+
+- **Stability and Security**: Coinbase Wallet is known for its robust security measures, ensuring a safer experience.
+- **Compatibility**: Coinbase Wallet is compatible with our game's features and offers a seamless user experience.
+
+#### Steps to Switch:
+
+1. **Download and Install Coinbase Wallet**: Available on both browser extensions and mobile applications.
+2. **Transfer Funds**: If you have assets in Metamask, transfer them to your Coinbase Wallet.
+3. **Connect to the Game**: Use Coinbase Wallet to interact with the game, just as you would with Metamask.
+
+_For more detailed instructions on setting up and using Coinbase Wallet, please refer to their official
+[guidance and support](https://www.coinbase.com/wallet)._
+
 ## Key Features
 
 The Werewolf Game, empowered by Zama's FHEVM, introduces groundbreaking features in the realm of decentralized
